@@ -866,16 +866,17 @@ async function postToMastodon(env, event) {
     minute: '2-digit'
   });
 
-  let status = `${event.summary}\n`;
+  let status = `Social.\u200Ccoop meetings: https://link.social.coop/calendar\n`;
+  status += `${event.summary}\n`;
   status += `${laDate}\n`;
   status += `${ptTime} PT | ${nyTime} ET | ${utcTime} UTC\n`;
   
-  if (event.location) {
+  if (event.location && !event.location.includes('://') && !event.location.match(/\w+\.\w+\/\w+/)) {
     status += `${event.location}\n`;
   }
   
   // Add footer with line break (\n) to separate from event details
-  status += `\nMembers are welcome to observe this meeting and all upcoming social.coop meetings: https://link.social.coop/calendar`;
+  status += `\nSocial.coop members are welcome to observe this and all upcoming meetings.`;
 
   // Generate and upload image using external service
   let mediaIds = [];
@@ -892,6 +893,7 @@ async function postToMastodon(env, event) {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${env.MASTODON_ACCESS_TOKEN}`,
+          'User-Agent': 'CalDAV to Mastodon Bot/1.0'
         },
         body: formData
       });
@@ -913,6 +915,7 @@ async function postToMastodon(env, event) {
     headers: {
       'Authorization': `Bearer ${env.MASTODON_ACCESS_TOKEN}`,
       'Content-Type': 'application/json',
+      'User-Agent': 'CalDAV to Mastodon Bot/1.0'
     },
     body: JSON.stringify({
       status: status,
