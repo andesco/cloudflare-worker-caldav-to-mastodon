@@ -1,0 +1,26 @@
+{
+  "name": "calendar-mastodon-bot",
+  "version": "1.0.0",
+  "description": "Cloudflare Worker to post calendar events to Mastodon",
+  "main": "index.js",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "dependencies": {
+    "ical.js": "^2.1.0",
+    "rrule": "^2.8.1"
+  },
+  "devDependencies": {
+    "wrangler": "^4.34.0"
+  },
+  "keywords": [
+    "cloudflare-workers",
+    "calendar",
+    "mastodon",
+    "ics",
+    "rrule"
+  ],
+  "author": "",
+  "license": "MIT"
+}

@@ -1,0 +1,28 @@
+# Claude Code configuration
+.claude/
+
+# Environment files
+.env
+.env.example
+.env.local
+
+# Temporary files
+*.ics
+
+# Logs
+*.log
+.wrangler/logs/
+.wrangler/
+
+# Node modules
+node_modules/
+
+# macOS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Personal wrangler configuration
+wrangler.local.toml
