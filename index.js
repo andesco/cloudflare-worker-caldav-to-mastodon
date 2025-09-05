@@ -519,9 +519,9 @@ function getWebInterface() {
 </head>
 <body>
     <div class="container">
-        <h1>CalDav to Mastodon</h1>
+        <h1>CalDAV to Mastodon</h1>
         
-        <p><a href="https://github.com/andesco/cloudflare-worker-CalDAV-to-Mastodon">andesco/cloudflare-worker-caldav-to-mastodon</a>
+        <p><a href="https://github.com/andesco/cloudflare-worker-caldav-to-mastodon">andesco/cloudflare-worker-caldav-to-mastodon</a>
         
         <p>While the serverless function is intended to run automatically (based on a cron schedule) you can also manually post calendar events to Mastodon.
         

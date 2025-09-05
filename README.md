@@ -28,7 +28,7 @@ This Cloudflare Worker automatically posts upcoming events (in a public CalDAV c
 
 #### Deploy to Cloudflare
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/andrewe/cloudflare-worker-caldav-to-mastodon)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/andesco/cloudflare-worker-caldav-to-mastodon)
 
 #### Cloudflare Dashboard
 
