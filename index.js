@@ -802,25 +802,26 @@ function getWebInterface() {
                 day: 'numeric'
             }).replace(/(\w{3})\s/, '$1. ');
             
-            // Format PT time
+            // Format PT time (12-hour, no leading zero)
             const ptTime = date.toLocaleTimeString('en-US', {
                 timeZone: 'America/Los_Angeles',
-                hour: '2-digit',
+                hour: 'numeric',
                 minute: '2-digit'
             });
             
-            // Format ET time
+            // Format ET time (12-hour, no leading zero)
             const etTime = date.toLocaleTimeString('en-US', {
                 timeZone: 'America/New_York',
-                hour: '2-digit',
+                hour: 'numeric',
                 minute: '2-digit'
             });
             
-            // Format UTC time
+            // Format UTC time (24-hour)
             const utcTime = date.toLocaleTimeString('en-US', {
                 timeZone: 'UTC',
                 hour: '2-digit',
-                minute: '2-digit'
+                minute: '2-digit',
+                hour12: false
             });
             
             return laDate + '<br>' + ptTime + ' PT | ' + etTime + ' ET | ' + utcTime + ' UTC';
@@ -845,25 +846,26 @@ async function postToMastodon(env, event) {
     day: 'numeric'
   }).replace(/(\w{3})\s/, '$1. ');
   
-  // Format PT time
+  // Format PT time (12-hour, no leading zero)
   const ptTime = eventDate.toLocaleTimeString('en-US', {
     timeZone: 'America/Los_Angeles',
-    hour: '2-digit',
+    hour: 'numeric',
     minute: '2-digit'
   });
   
-  // Format NY time only
+  // Format NY time (12-hour, no leading zero)
   const nyTime = eventDate.toLocaleTimeString('en-US', {
     timeZone: 'America/New_York',
-    hour: '2-digit',
+    hour: 'numeric',
     minute: '2-digit'
   });
   
-  // Format UTC time only
+  // Format UTC time (24-hour)
   const utcTime = eventDate.toLocaleTimeString('en-US', {
     timeZone: 'UTC',
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
+    hour12: false
   });
 
   let status = `Social.\u200Ccoop meetings: https://link.social.coop/calendar\n`;
@@ -944,10 +946,10 @@ async function generateEventImage(event) {
     day: 'numeric'
   }).replace(/(\w{3})\s/, '$1. ');
   
-  // Format PT time
+  // Format PT time (12-hour, no leading zero)
   const ptTime = eventDate.toLocaleTimeString('en-US', {
     timeZone: 'America/Los_Angeles',
-    hour: '2-digit',
+    hour: 'numeric',
     minute: '2-digit'
   });
 
