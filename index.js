@@ -8,7 +8,7 @@ import ICAL from 'ical.js';
 export default {
   async scheduled(event, env, ctx) {
     try {
-      await checkAndPostEvents(env);
+      await checkAndPostTomorrowEvents(env);
     } catch (error) {
       console.error('Error in scheduled function:', error);
     }
@@ -91,7 +91,7 @@ export default {
     }
     
     if (request.method === 'GET') {
-      return new Response(getWebInterface(), {
+      return new Response(getWebInterface(env), {
         headers: { 'Content-Type': 'text/html; charset=UTF-8' },
         status: 200
       });
@@ -194,14 +194,18 @@ async function checkAndPostEvents(env) {
 
 async function checkAndPostTomorrowEvents(env) {
   const now = new Date();
-  const tomorrow = new Date(now);
-  tomorrow.setDate(now.getDate() + 1);
-  tomorrow.setHours(0, 0, 0, 0); // Start of tomorrow
+  
+  // Get configurable days ahead (0-15, default: 1)
+  const daysAhead = Math.max(0, Math.min(15, parseInt(env.DAYS_AHEAD || '1')));
+  
+  const targetDate = new Date(now);
+  targetDate.setDate(now.getDate() + daysAhead);
+  targetDate.setHours(0, 0, 0, 0); // Start of target date
 
-  const tomorrowEnd = new Date(tomorrow);
-  tomorrowEnd.setDate(tomorrow.getDate() + 1); // End of tomorrow
+  const targetDateEnd = new Date(targetDate);
+  targetDateEnd.setDate(targetDate.getDate() + 1); // End of target date
 
-  const { events: rawEvents } = await fetchCalendarEvents(env, 2); // Fetch for 2 days to cover tomorrow
+  const { events: rawEvents } = await fetchCalendarEvents(env, Math.max(1, daysAhead + 1)); // Fetch enough days to cover target date
 
   const eventsToPost = [];
 
@@ -217,7 +221,7 @@ async function checkAndPostTomorrowEvents(env) {
       }
 
       const rule = new RRule(rruleOptions);
-      const occurrences = rule.between(tomorrow, tomorrowEnd, true); // Include start and end
+      const occurrences = rule.between(targetDate, targetDateEnd, true); // Include start and end
 
       for (const occurrence of occurrences) {
         eventsToPost.push({
@@ -231,7 +235,7 @@ async function checkAndPostTomorrowEvents(env) {
       }
     } else {
       const startDate = dtstart.getFirstValue().toJSDate();
-      if (startDate >= tomorrow && startDate < tomorrowEnd) {
+      if (startDate >= targetDate && startDate < targetDateEnd) {
         eventsToPost.push({
           uid: vevent.getFirstPropertyValue('uid'),
           summary: vevent.getFirstPropertyValue('summary'),
@@ -244,15 +248,17 @@ async function checkAndPostTomorrowEvents(env) {
     }
   }
 
+  const dayLabel = `${daysAhead} ${daysAhead === 1 ? 'day' : 'days'}`;
+  
   if (eventsToPost.length === 0) {
-    return { success: true, message: "No events found for next day", count: 0 };
+    return { success: true, message: `${dayLabel}: No events found`, count: 0 };
   }
 
   for (const event of eventsToPost) {
     await postToMastodon(env, event);
   }
   
-  return { success: true, message: `Posted ${eventsToPost.length} event(s) for tomorrow`, count: eventsToPost.length };
+  return { success: true, message: `${dayLabel}: Posted ${eventsToPost.length} ${eventsToPost.length === 1 ? 'event' : 'events'}`, count: eventsToPost.length };
 }
 
 async function checkAndPostNextEvent(env) {
@@ -377,7 +383,24 @@ async function getWebEvents(env, days) {
   return { events: eventsToDisplay, debug };
 }
 
-function getWebInterface() {
+function getWebInterface(env) {
+  const daysAhead = Math.max(0, Math.min(15, parseInt(env.DAYS_AHEAD || '1')));
+  
+  let buttonText, descriptionText;
+  if (daysAhead === 0) {
+    buttonText = "Post Today\u2019s Events";
+    descriptionText = "<strong>Today\u2019s Events:</strong> posts events scheduled for today";
+  } else if (daysAhead === 1) {
+    buttonText = "Post Next Day\u2019s Events";
+    descriptionText = "<strong>Next Day\u2019s Events:</strong> posts events scheduled for tomorrow";
+  } else if (daysAhead === 2) {
+    buttonText = "Post Day After Tomorrow\u2019s Events";
+    descriptionText = "<strong>Day After Tomorrow\u2019s Events:</strong> posts events scheduled for the day after tomorrow";
+  } else {
+    buttonText = `Post Events (+${daysAhead} Days)`;
+    descriptionText = `<strong>+${daysAhead} Days Events:</strong> posts events scheduled for ${daysAhead} days ahead`;
+  }
+  
   return `
 <!DOCTYPE html>
 <html>
@@ -525,13 +548,9 @@ function getWebInterface() {
         
         <p>While the serverless function is intended to run automatically (based on a cron schedule) you can also manually post calendar events to Mastodon.
         
-        <div class="description">
-            <strong>Next Day:</strong> posts events scheduled for tomorrow<br />
-            <strong>Next Event:</strong> posts the next upcoming event
-        </div>
         
         <button onclick="triggerNextDay()" id="nextDayBtn">
-            Post Next Day
+            ${buttonText}
         </button>
         
         <button onclick="triggerNextEvent()" id="nextEventBtn">
@@ -549,9 +568,9 @@ function getWebInterface() {
 
         <div id="debugContainer" class="debug-container" style="display: none;">
             <h3>Debug Information</h3>
-            <h4>Export URL:</h4>
+            <strong>Export URL:</strong>
             <pre id="propfindResult"></pre>
-            <h4>jCal Data:</h4>
+            <strong>jCal Data:</strong>
             <pre id="eventUrls"></pre>
         </div>
     </div>
@@ -629,7 +648,7 @@ function getWebInterface() {
             } finally {
                 button.disabled = false;
                 button.textContent = buttonId === 'nextDayBtn' ?
-                    'Post Next Day' :
+                    '${buttonText}' :
                     'Post Next Event';
             }
         }
@@ -670,7 +689,7 @@ function getWebInterface() {
                 
                 // Display recurring events
                 if (recurringEvents.length > 0) {
-                    recurringDiv.innerHTML = '<h4>Recurring Events</h4>' +
+                    recurringDiv.innerHTML = '<h3>Recurring Events</h3>' +
                         recurringEvents.map(event => {
                             const eventIndex = events.indexOf(event);
                             const nextOccurrence = calculateNextOccurrence(event);
@@ -692,7 +711,7 @@ function getWebInterface() {
                     const futureEvents = singleEvents.filter(e => new Date(e.start) > now);
                     const pastEvents = singleEvents.filter(e => new Date(e.start) <= now);
                     
-                    singleDiv.innerHTML = '<h4>Single Events</h4>' +
+                    singleDiv.innerHTML = '<h3>Single Events</h3>' +
                         [...futureEvents, ...pastEvents].map(event => {
                             const eventIndex = events.indexOf(event);
                             const isFuture = new Date(event.start) > now;
