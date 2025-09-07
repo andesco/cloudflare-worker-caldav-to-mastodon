@@ -15,7 +15,12 @@ This Cloudflare Worker automatically posts upcoming events (in a public CalDAV c
 
 - Cloudflare account
 - Mastodon account and access token with `write:statuses` permission
-- A public CalDAV calendar feed that supports the [sabre/dav ICSExportPlugin](https://sabre.io/dav/ics-export-plugin/). This is a specific requirement for this worker to function correctly.
+- A public CalDAV calendar feed that supports the [sabre/dav ICSExportPlugin](https://sabre.io/dav/ics-export-plugin/).
+
+> [!IMPORTANT]
+> This worker requires a CalDAV server with the [sabre/dav ICS Export Plugin](https://sabre.io/dav/ics-export-plugin/) enabled, which allows this Worker to efficiently fetch events in jCal format, within a limited date range. For example:
+>
+> `{CALENDAR_EXPORT_URL}&accept=jcal&start={timestamp}&end={timestamp}&expand=1`
 
 ### 1. Deploy
 
@@ -157,7 +162,7 @@ curl -X POST https://{worker}.{subdomain}.workers.dev/post/next
 - posts the closest event within the next 2 weeks
 
 
-## Customization
+## Other Notes
 
 #### Changing Post Format
 
@@ -190,18 +195,7 @@ const options = { timeZone: 'America/Toronto' };
 const localDate = new Date(tomorrow.toLocaleString('en-US', options));
 ```
 
-## Troubleshooting
-
-## Calendar Data Source
-
-> [!IMPORTANT]
-> This worker requires a CalDAV server with the [sabre/dav ICS Export Plugin](https://sabre.io/dav/ics-export-plugin/) enabled.
-
-ICS Export Plugin allows this Worker to efficiently fetch events in jCal format, within a limited date range, by contructing a URL as follows:
-
-`{CALENDAR_EXPORT_URL}&accept=jcal&start={timestamp}&end={timestamp}&expand=1`
-
-## File Structure
+#### File Structure
 
 ```
 cloudflare-worker-caldav-to-mastodon/

@@ -759,7 +759,7 @@ function getWebInterface(env) {
                     const futureEvents = singleEvents.filter(e => new Date(e.start) > now);
                     const pastEvents = singleEvents.filter(e => new Date(e.start) <= now);
                     
-                    singleDiv.innerHTML = '<h3>Single Events</h3>' +
+                    singleDiv.innerHTML =
                         [...futureEvents, ...pastEvents].map(event => {
                             const eventIndex = events.indexOf(event);
                             const isFuture = new Date(event.start) > now;
