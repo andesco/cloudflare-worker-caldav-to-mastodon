@@ -862,7 +862,7 @@ function getWebInterface(env) {
             
             // Format date (full weekday, abbreviated month with period)
             const laDate = date.toLocaleDateString('en-US', {
-                timeZone: 'America/Los_Angeles',
+                timeZone: 'America/Vancouver',
                 weekday: 'long',
                 year: 'numeric',
                 month: 'short',
@@ -871,14 +871,14 @@ function getWebInterface(env) {
             
             // Format PT time (12-hour, no leading zero)
             const ptTime = date.toLocaleTimeString('en-US', {
-                timeZone: 'America/Los_Angeles',
+                timeZone: 'America/Vancouver',
                 hour: 'numeric',
                 minute: '2-digit'
             });
             
             // Format ET time (12-hour, no leading zero)
             const etTime = date.toLocaleTimeString('en-US', {
-                timeZone: 'America/New_York',
+                timeZone: 'America/Toronto',
                 hour: 'numeric',
                 minute: '2-digit'
             });
@@ -906,7 +906,7 @@ async function postToMastodon(env, event) {
   
   // Format date (full weekday, abbreviated month with period)
   const laDate = eventDate.toLocaleDateString('en-US', {
-    timeZone: 'America/Los_Angeles',
+    timeZone: 'America/Vancouver',
     weekday: 'long',
     year: 'numeric',
     month: 'short',
@@ -915,14 +915,14 @@ async function postToMastodon(env, event) {
   
   // Format PT time (12-hour, no leading zero)
   const ptTime = eventDate.toLocaleTimeString('en-US', {
-    timeZone: 'America/Los_Angeles',
+    timeZone: 'America/Vancouver',
     hour: 'numeric',
     minute: '2-digit'
   });
   
   // Format NY time (12-hour, no leading zero)
   const nyTime = eventDate.toLocaleTimeString('en-US', {
-    timeZone: 'America/New_York',
+    timeZone: 'America/Toronto',
     hour: 'numeric',
     minute: '2-digit'
   });
@@ -1006,7 +1006,7 @@ async function generateEventImage(event) {
   
   // Format date (full weekday, abbreviated month with period)
   const laDate = eventDate.toLocaleDateString('en-US', {
-    timeZone: 'America/Los_Angeles',
+    timeZone: 'America/Vancouver',
     weekday: 'long',
     year: 'numeric',
     month: 'short',
@@ -1015,7 +1015,7 @@ async function generateEventImage(event) {
   
   // Format PT time (12-hour, no leading zero)
   const ptTime = eventDate.toLocaleTimeString('en-US', {
-    timeZone: 'America/Los_Angeles',
+    timeZone: 'America/Vancouver',
     hour: 'numeric',
     minute: '2-digit'
   });
