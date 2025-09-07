@@ -17,7 +17,7 @@ This Cloudflare Worker automatically posts upcoming events (in a public CalDAV c
 - Mastodon account and access token with `write:statuses` permission
 - A public CalDAV calendar feed that supports the [sabre/dav ICSExportPlugin](https://sabre.io/dav/ics-export-plugin/). This is a specific requirement for this worker to function correctly.
 
-### 1. Deploy Cloudflare Worker
+### 1. Deploy
 
 #### Deploy to Cloudflare
 
@@ -186,7 +186,7 @@ The Worker uses UTC by default. To handle specific timezones:
 ```javascript
 const tomorrow = new Date();
 // Convert to specific timezone
-const options = { timeZone: 'America/Toronto' };
+const options = { timeZone: 'America/New_York' };
 const localDate = new Date(tomorrow.toLocaleString('en-US', options));
 ```
 
