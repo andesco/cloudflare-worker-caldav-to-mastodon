@@ -210,70 +210,94 @@ async function checkAndPostEvents(env) {
 async function checkAndPostDayEvents(env) {
   const now = new Date();
   
-  // Get configurable days ahead (0-15, default: 1)
-  const daysAhead = Math.max(0, Math.min(15, parseInt(env.DAYS_AHEAD || '1')));
+  // Parse comma-separated days ahead (max 4 values, 0-15 range, default: "1")
+  const daysAheadStr = env.DAYS_AHEAD || '1';
+  const daysArray = daysAheadStr.split(',')
+    .map(d => parseInt(d.trim()))
+    .filter(d => !isNaN(d) && d >= 0 && d <= 15)
+    .slice(0, 4); // Max 4 values
   
-  const targetDate = new Date(now);
-  targetDate.setDate(now.getDate() + daysAhead);
-  targetDate.setHours(0, 0, 0, 0); // Start of target date
+  // Remove duplicates and sort
+  const uniqueDays = [...new Set(daysArray)].sort((a, b) => a - b);
+  
+  // If no valid days, default to [1]
+  if (uniqueDays.length === 0) {
+    uniqueDays.push(1);
+  }
 
-  const targetDateEnd = new Date(targetDate);
-  targetDateEnd.setDate(targetDate.getDate() + 1); // End of target date
+  // Determine max days to fetch calendar events
+  const maxDays = Math.max(...uniqueDays) + 1;
+  const { events: rawEvents } = await fetchCalendarEvents(env, Math.max(1, maxDays));
 
-  const { events: rawEvents } = await fetchCalendarEvents(env, Math.max(1, daysAhead + 1)); // Fetch enough days to cover target date
+  const allEventsToPost = [];
 
-  const eventsToPost = [];
+  // Process each day
+  for (const daysAhead of uniqueDays) {
+    const targetDate = new Date(now);
+    targetDate.setDate(now.getDate() + daysAhead);
+    targetDate.setHours(0, 0, 0, 0); // Start of target date
 
-  for (const vevent of rawEvents) {
-    const dtstart = vevent.getFirstProperty('dtstart');
-    const rruleProp = vevent.getFirstProperty('rrule');
+    const targetDateEnd = new Date(targetDate);
+    targetDateEnd.setDate(targetDate.getDate() + 1); // End of target date
 
-    if (rruleProp) {
-      const rruleOptions = RRule.parseString(rruleProp.getFirstValue().toString());
-      rruleOptions.dtstart = dtstart.getFirstValue().toJSDate();
-      if (dtstart.getFirstValue().timezone) {
-        rruleOptions.tzid = dtstart.getFirstValue().timezone;
-      }
+    for (const vevent of rawEvents) {
+      const dtstart = vevent.getFirstProperty('dtstart');
+      const rruleProp = vevent.getFirstProperty('rrule');
 
-      const rule = new RRule(rruleOptions);
-      const occurrences = rule.between(targetDate, targetDateEnd, true); // Include start and end
+      if (rruleProp) {
+        const rruleOptions = RRule.parseString(rruleProp.getFirstValue().toString());
+        rruleOptions.dtstart = dtstart.getFirstValue().toJSDate();
+        if (dtstart.getFirstValue().timezone) {
+          rruleOptions.tzid = dtstart.getFirstValue().timezone;
+        }
 
-      for (const occurrence of occurrences) {
-        eventsToPost.push({
-          uid: vevent.getFirstPropertyValue('uid'),
-          summary: vevent.getFirstPropertyValue('summary'),
-          start: occurrence.toISOString(),
-          location: vevent.getFirstPropertyValue('location'),
-          description: vevent.getFirstPropertyValue('description'),
-          url: null
-        });
-      }
-    } else {
-      const startDate = dtstart.getFirstValue().toJSDate();
-      if (startDate >= targetDate && startDate < targetDateEnd) {
-        eventsToPost.push({
-          uid: vevent.getFirstPropertyValue('uid'),
-          summary: vevent.getFirstPropertyValue('summary'),
-          start: startDate.toISOString(),
-          location: vevent.getFirstPropertyValue('location'),
-          description: vevent.getFirstPropertyValue('description'),
-          url: null
-        });
+        const rule = new RRule(rruleOptions);
+        const occurrences = rule.between(targetDate, targetDateEnd, true); // Include start and end
+
+        for (const occurrence of occurrences) {
+          allEventsToPost.push({
+            uid: vevent.getFirstPropertyValue('uid'),
+            summary: vevent.getFirstPropertyValue('summary'),
+            start: occurrence.toISOString(),
+            location: vevent.getFirstPropertyValue('location'),
+            description: vevent.getFirstPropertyValue('description'),
+            url: null
+          });
+        }
+      } else {
+        const startDate = dtstart.getFirstValue().toJSDate();
+        if (startDate >= targetDate && startDate < targetDateEnd) {
+          allEventsToPost.push({
+            uid: vevent.getFirstPropertyValue('uid'),
+            summary: vevent.getFirstPropertyValue('summary'),
+            start: startDate.toISOString(),
+            location: vevent.getFirstPropertyValue('location'),
+            description: vevent.getFirstPropertyValue('description'),
+            url: null
+          });
+        }
       }
     }
   }
 
-  const dayLabel = `${daysAhead} ${daysAhead === 1 ? 'day' : 'days'}`;
+  // Remove duplicate events (same UID and start time)
+  const uniqueEvents = allEventsToPost.filter((event, index, self) =>
+    index === self.findIndex(e => e.uid === event.uid && e.start === event.start)
+  );
+
+  const dayLabel = uniqueDays.length === 1 
+    ? `${uniqueDays[0]} ${uniqueDays[0] === 1 ? 'day' : 'days'}` 
+    : `${uniqueDays.join(',')} days`;
   
-  if (eventsToPost.length === 0) {
+  if (uniqueEvents.length === 0) {
     return { success: true, message: `${dayLabel}: No events found`, count: 0 };
   }
 
-  for (const event of eventsToPost) {
+  for (const event of uniqueEvents) {
     await postToMastodon(env, event);
   }
   
-  return { success: true, message: `${dayLabel}: Posted ${eventsToPost.length} ${eventsToPost.length === 1 ? 'event' : 'events'}`, count: eventsToPost.length };
+  return { success: true, message: `${dayLabel}: Posted ${uniqueEvents.length} ${uniqueEvents.length === 1 ? 'event' : 'events'}`, count: uniqueEvents.length };
 }
 
 async function checkAndPostNextEvent(env) {
@@ -399,21 +423,30 @@ async function getWebEvents(env, days) {
 }
 
 function getWebInterface(env) {
-  const daysAhead = Math.max(0, Math.min(15, parseInt(env.DAYS_AHEAD || '1')));
+  // Parse comma-separated days ahead for button text
+  const daysAheadStr = env.DAYS_AHEAD || '1';
+  const daysArray = daysAheadStr.split(',')
+    .map(d => parseInt(d.trim()))
+    .filter(d => !isNaN(d) && d >= 0 && d <= 15)
+    .slice(0, 4); // Max 4 values
   
-  let buttonText, descriptionText;
-  if (daysAhead === 0) {
-    buttonText = "Post Today\u2019s Events";
-    descriptionText = "<strong>Today\u2019s Events:</strong> posts events scheduled for today";
-  } else if (daysAhead === 1) {
-    buttonText = "Post Next Day\u2019s Events";
-    descriptionText = "<strong>Next Day\u2019s Events:</strong> posts events scheduled for tomorrow";
-  } else if (daysAhead === 2) {
-    buttonText = "Post Day After Tomorrow\u2019s Events";
-    descriptionText = "<strong>Day After Tomorrow\u2019s Events:</strong> posts events scheduled for the day after tomorrow";
+  const uniqueDays = [...new Set(daysArray)].sort((a, b) => a - b);
+  if (uniqueDays.length === 0) uniqueDays.push(1);
+  
+  let buttonText;
+  if (uniqueDays.length === 1) {
+    const day = uniqueDays[0];
+    if (day === 0) {
+      buttonText = "Post Today\u2019s Events";
+    } else if (day === 1) {
+      buttonText = "Post Next Day\u2019s Events";
+    } else if (day === 2) {
+      buttonText = "Post Day After Tomorrow\u2019s Events";
+    } else {
+      buttonText = `Post Events (+${day} Days)`;
+    }
   } else {
-    buttonText = `Post Events (+${daysAhead} Days)`;
-    descriptionText = `<strong>+${daysAhead} Days Events:</strong> posts events scheduled for ${daysAhead} days ahead`;
+    buttonText = `Post Events (${uniqueDays.join(',')} Days)`;
   }
   
   return `
@@ -663,7 +696,7 @@ function getWebInterface(env) {
             } finally {
                 button.disabled = false;
                 button.textContent = buttonId === 'nextDayBtn' ?
-                    '${buttonText}' :
+                    \`${buttonText}\` :
                     'Post Next Event';
             }
         }

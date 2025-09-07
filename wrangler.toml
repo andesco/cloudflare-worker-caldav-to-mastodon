@@ -11,7 +11,7 @@ crons = ["30 17 * * *"]
 # public (non-encrypted) variables:
 MASTODON_INSTANCE_URL = "" # example: https://social.coop
 CALENDAR_EXPORT_URL = "" # CalDAV export URL ending in ?export
-DAYS_AHEAD = "1" # post events occuring __ days ahead (0-15, where 0=today and 1=tomorrow, default: 1)
+DAYS_AHEAD = "1" # post events occuring __ days ahead (0-15, max 4 values, examples: "1", "0,1", "1,7,14")
 
 
 # encrypted variables:
