@@ -8,7 +8,7 @@ import ICAL from 'ical.js';
 export default {
   async scheduled(event, env, ctx) {
     try {
-      await checkAndPostTomorrowEvents(env);
+      await checkAndPostDayEvents(env);
     } catch (error) {
       console.error('Error in scheduled function:', error);
     }
@@ -26,9 +26,24 @@ export default {
       }
     }
 
+    if (request.method === 'POST' && url.pathname === '/post/day') {
+      try {
+        const result = await checkAndPostDayEvents(env);
+        return new Response(JSON.stringify(result), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (error) {
+        return new Response(JSON.stringify({ success: false, message: error.message }), {
+          status: 500,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+    }
+
     if (request.method === 'POST' && url.pathname === '/post/tomorrow') {
       try {
-        const result = await checkAndPostTomorrowEvents(env);
+        const result = await checkAndPostDayEvents(env);
         return new Response(JSON.stringify(result), {
           status: 200,
           headers: { 'Content-Type': 'application/json' }
@@ -192,7 +207,7 @@ async function checkAndPostEvents(env) {
   }
 }
 
-async function checkAndPostTomorrowEvents(env) {
+async function checkAndPostDayEvents(env) {
   const now = new Date();
   
   // Get configurable days ahead (0-15, default: 1)
@@ -579,7 +594,7 @@ function getWebInterface(env) {
         let globalEvents = [];
         
         async function triggerNextDay() {
-            await triggerEndpoint('/post/tomorrow', 'nextDayBtn', 'Next day events');
+            await triggerEndpoint('/post/day', 'nextDayBtn', 'Next day events');
         }
         
         async function triggerNextEvent() {

@@ -1,10 +1,10 @@
 # CalDAV to Mastodon
 
-This Cloudflare Worker automatically posts upcoming events (in a public CalDAV calendar) to a Mastodon account. It runs daily and checks for meetings scheduled for the next day.
+This Cloudflare Worker automatically posts upcoming events (in a public CalDAV calendar) to a Mastodon account. It runs daily and checks for meetings scheduled for a configurable number of days ahead.
 
 ## Features
 
-- automatically checks for tomorrow’s meetings daily
+- automatically checks for upcoming meetings daily (configurable days ahead)
 - posts formatted announcements to Mastodon
 - serverless function via Cloudflare Workers
 - basic web interface manual support for testing
@@ -21,8 +21,8 @@ This Cloudflare Worker automatically posts upcoming events (in a public CalDAV c
 
 1. Mastodon instance ⇢ Settings ⇢ Development ⇢ New Application
 2. Permissions:  `write:statuses`
-2. Save
-6. Copy **Access Token**
+3. Save
+4. Copy **Access Token** (keep this secure - don't add it to your worker yet)
 
 ### 2. Deploy Cloudflare Worker
 
@@ -56,7 +56,18 @@ Add public environment variables to your `wrangler.toml` file:
 [vars]
 CALENDAR_EXPORT_URL = "{URL}" # ends in ?export
 MASTODON_INSTANCE_URL = "{URL}"
+DAYS_AHEAD = "1" # post events occuring __ days ahead (0-15, where 0=today and 1=tomorrow, default: 1)
 ```
+
+### 3. Security Setup (IMPORTANT)
+
+**⚠️ Set up Cloudflare Access BEFORE adding your Mastodon token:**
+
+1. Go to [Cloudflare Dashboard](https://dash.cloudflare.com) → Security → Access → Applications
+2. Add application for your Worker domain
+3. Configure authentication rules (email, domain, etc.)
+
+**Why this matters:** Without protection, anyone who finds your worker URL can trigger posts to your Mastodon account. Deploy the worker first (without `MASTODON_ACCESS_TOKEN`), test it safely, then secure it before adding your token.
 
 ### 4. Configure Environment Variables
 
@@ -64,7 +75,8 @@ MASTODON_INSTANCE_URL = "{URL}"
 |----------|-------------|---------|
 | `CALENDAR_EXPORT_URL` | CalDAV calendar subscription URL | `https://social.coop/calendar/?export` |
 | `MASTODON_INSTANCE_URL` | Mastodon instance URL | `https://social.coop` |
-| `MASTODON_ACCESS_TOKEN` | access token from Mastodon | `your-private-access-token` |
+| `DAYS_AHEAD` | Days ahead to post events for (0-15, where 0=today, 1=tomorrow) | `1` |
+| `MASTODON_ACCESS_TOKEN` | access token from Mastodon (add ONLY after securing worker) | `your-private-access-token` |
 
 ### 5. Set Up Daily Schedule
 
@@ -84,7 +96,7 @@ Modify the cron schedule in `wrangler.toml` before deploying or use the Cloudfla
 
 Once deployed and configured, the Worker will:
 - run daily at your scheduled time (defaulting to 17:30 UTC);
-- check for events happening tomorrow; and
+- check for events happening N days ahead (configurable via `DAYS_AHEAD`, default: 1 day/tomorrow, 0=today); and
 - post formatted announcements to Mastodon for each event.
 
 ### Manual Testing
@@ -110,10 +122,15 @@ curl "https://{worker}.{subdomain}.workers.dev/api/events?days=14"
 ### POST /trigger
 
 ```bash
+curl -X POST https://{worker}.{subdomain}.workers.dev/post/day
+```
+- checks for events occurring N days ahead (based on `DAYS_AHEAD` setting) and posts to Mastodon
+- runs automatically via cron schedule
+
+```bash
 curl -X POST https://{worker}.{subdomain}.workers.dev/post/tomorrow
 ```
-- checks for events occuring the next day and post to Mastodon
-- runs automatic via cron scheudle
+- legacy alias for `/post/day` (for backward compatibility)
 
 ```bash
 curl -X POST https://{worker}.{subdomain}.workers.dev/post/next
@@ -134,7 +151,7 @@ To protect the web interface, set up Cloudflare Access in your dashboard:
 If your worker is protected by Cloudflare Access, use `cloudflared` CLI to  authenticate:
 
 ```bash
-cloudflared access curl https://{worker}.{subdomain}.workers.dev/post/tomorrow -X POST
+cloudflared access curl https://{worker}.{subdomain}.workers.dev/post/day -X POST
 ```
 
 
@@ -149,7 +166,7 @@ Modify the `postToMastodon()` function to customize:
 
 ### Filtering Events
 
-Add filters in `checkAndPostTomorrowsMeetings()` to only post certain events:
+Add filters in `checkAndPostDayEvents()` to only post certain events:
 
 ```javascript
 const tomorrowEvents = events.filter(event => {
