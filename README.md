@@ -186,7 +186,7 @@ The Worker uses UTC by default. To handle specific timezones:
 ```javascript
 const tomorrow = new Date();
 // Convert to specific timezone
-const options = { timeZone: 'America/New_York' };
+const options = { timeZone: 'America/Toronto' };
 const localDate = new Date(tomorrow.toLocaleString('en-US', options));
 ```
 
